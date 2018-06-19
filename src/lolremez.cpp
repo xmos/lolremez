@@ -51,6 +51,8 @@ static void usage()
     printf("  -p, --precision <bits>     floating-point precision (default 512)\n");
     printf("      --progress             print progress\n");
     printf("      --stats                print timing statistics\n");
+    printf("  -s  --structs              print timing structs\n");
+    printf("  -t  --templated            generate C++ templated types\n");
     printf("  -h, --help                 display this help and exit\n");
     printf("  -V, --version              output version information and exit\n");
     printf("\n");
@@ -95,6 +97,10 @@ int main(int argc, char **argv)
     bool show_stats = false;
     bool show_progress = false;
 
+	// dump coefficients in tabular form
+	bool structs = false;
+	bool templated = false;
+	
     remez_solver solver;
 
     lol::getopt opt(argc, argv);
@@ -108,6 +114,9 @@ int main(int argc, char **argv)
     opt.add_opt(202, "long-double", false);
     opt.add_opt(203, "stats",     false);
     opt.add_opt(204, "progress",  false);
+	//
+	opt.add_opt('s', "structs", false);
+	opt.add_opt('t', "template", false);
 
     for (;;)
     {
@@ -136,6 +145,14 @@ int main(int argc, char **argv)
                 FAIL("invalid precision %s", opt.arg);
             real::DEFAULT_BIGIT_COUNT = (bits + 31) / 32;
           } break;
+		case 't': 
+			templated = true;
+			break;
+		case 's': 
+			structs = true;
+			templated = false;
+			break;
+		  
         case 200: /* --float */
             mode = mode_float;
             break;
@@ -251,6 +268,73 @@ int main(int argc, char **argv)
         printf(" * with weight function g(x) = %s\n", argv[opt.index + 1]);
     printf(" * on interval [ %s, %s ]\n", str_xmin.c_str(), str_xmax.c_str());
     printf(" * with a polynomial of degree %d. */\n", p.degree());
+#if 1
+	// new block to accomodate generation of structs and/or templated functions
+	// attempts to maintain existing, documented, functionality.
+	{
+		if (structs)
+		{
+			printf("{ %d, %s, %s, {", p.degree(), str_xmin.c_str(), str_xmax.c_str());
+		}
+		else if (templated)
+		{
+			type = "T";
+			printf("%s f_%d_%s_%s(int x)\n{\n", type, p.degree(), str_xmin.c_str(), str_xmax.c_str());
+		}
+		else
+		{
+			printf("%s f_%d_%s_%s(%s x)\n{\n", type, p.degree(), str_xmin.c_str(), str_xmax.c_str(), type);
+		}
+			
+		for (int j = p.degree(); j >= 0; --j)
+		{
+			if (structs)
+			{
+				p[j].print(digits);
+				switch (mode)
+				{
+				case mode_float: printf("f,"); break;
+				case mode_double: printf(","); break;
+				case mode_long_double: printf("l,"); break;
+				}
+			}
+			else if (templated)
+			{
+				char const *a = j ? "u = u * T(x) + T(" : "return u * T(x) + T(";
+				if (j == p.degree())
+					printf("    %s u = T(", type);
+				else
+					printf("    %s", a);
+				p[j].print(digits);
+				switch (mode)
+				{
+				case mode_float: printf("f);\n"); break;
+				case mode_double: printf(");\n"); break;
+				case mode_long_double: printf("l);\n"); break;
+				}
+			}
+			else
+			{
+				char const *a = j ? "u = u * x +" : "return u * x +";
+				if (j == p.degree())
+					printf("    %s u = ", type);
+				else
+					printf("    %s ", a);
+				p[j].print(digits);
+				switch (mode)
+				{
+				case mode_float: printf("f;\n"); break;
+				case mode_double: printf(";\n"); break;
+				case mode_long_double: printf("l;\n"); break;
+				}
+			}
+		}
+		if (structs)
+		printf("}},\n");
+		else
+			printf("}\n");
+	}
+#else	
     printf("%s f(%s x)\n{\n", type, type);
     for (int j = p.degree(); j >= 0; --j)
     {
@@ -268,7 +352,7 @@ int main(int argc, char **argv)
         }
     }
     printf("}\n");
-
+#endif
     return 0;
 }
 
