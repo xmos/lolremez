@@ -51,6 +51,8 @@ static void usage()
     printf("  -p, --precision <bits>     floating-point precision (default 512)\n");
     printf("      --progress             print progress\n");
     printf("      --stats                print timing statistics\n");
+    printf("  -s  --structs              print timing structs\n");
+    printf("  -t  --templated            generate C++ templated types\n");
     printf("  -h, --help                 display this help and exit\n");
     printf("  -V, --version              output version information and exit\n");
     printf("\n");
@@ -266,23 +268,22 @@ int main(int argc, char **argv)
         printf(" * with weight function g(x) = %s\n", argv[opt.index + 1]);
     printf(" * on interval [ %s, %s ]\n", str_xmin.c_str(), str_xmax.c_str());
     printf(" * with a polynomial of degree %d. */\n", p.degree());
-    printf("%s f(%s x)\n{\n", type, type);
 #if 1
 	// new block to accomodate generation of structs and/or templated functions
 	// attempts to maintain existing, documented, functionality.
 	{
 		if (structs)
 		{
-			printf("{ %d, %s, %s, {", p.degree(), str_xmin.C(), str_xmax.C());
+			printf("{ %d, %s, %s, {", p.degree(), str_xmin.c_str(), str_xmax.c_str());
 		}
 		else if (templated)
 		{
 			type = "T";
-			printf("%s f_%d_%s_%s(int x)\n{\n", type, p.degree(), str_xmin.C(), str_xmax.C());
+			printf("%s f_%d_%s_%s(int x)\n{\n", type, p.degree(), str_xmin.c_str(), str_xmax.c_str());
 		}
 		else
 		{
-			printf("%s f_%d_%s_%s(%s x)\n{\n", type, p.degree(), str_xmin.C(), str_xmax.C(), type);
+			printf("%s f_%d_%s_%s(%s x)\n{\n", type, p.degree(), str_xmin.c_str(), str_xmax.c_str(), type);
 		}
 			
 		for (int j = p.degree(); j >= 0; --j)
@@ -334,6 +335,7 @@ int main(int argc, char **argv)
 			printf("}\n");
 	}
 #else	
+    printf("%s f(%s x)\n{\n", type, type);
     for (int j = p.degree(); j >= 0; --j)
     {
         char const *a = j ? "u = u * x +" : "return u * x +";
